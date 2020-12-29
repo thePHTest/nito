@@ -1,0 +1,54 @@
+version(1);
+
+project_name = "Nito";
+
+patterns = {
+	"*.bat",
+	"*.c",
+	"*.cpp",
+	"*.ds",
+	"*.h",
+	"*.bat",
+	"*.sh",
+	"*.odin",
+	"*.4coder",
+	"*.txt",
+	"*.glsl",
+};
+
+blacklist_patterns = {
+	".*",
+};
+
+load_paths = {
+	{
+		{ {"."}, .recursive = true, .relative = true }, .os = "win"
+	},
+};
+
+command_list = {
+	{
+		.name = "build",
+		.out = "*compilation*",
+		.footer_panel = true,
+		.save_dirty_files = true,
+		.cursor_at_end = false,
+		.cmd = {
+			{ "build.bat", .os = "win" },
+		},
+	},
+	
+	{
+		.name = "run",
+		.out = "*compilation*",
+		.footer_panel = true,
+		.save_dirty_files = true,
+		.cursor_at_end = false,
+		.cmd = {
+			{ "nito.bat", .os = "win" },
+		},
+	},
+};
+
+fkey_command[1] = "build";
+fkey_command[2] = "run";
