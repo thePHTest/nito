@@ -1,0 +1,9 @@
+[submodule "deps/odin-stb"]
+	path = deps/odin-stb
+	url = https://github.com/thePHTest/odin-stb.git
+[submodule "deps/odin-sdl2"]
+	path = deps/odin-sdl2
+	url = https://github.com/thePHTest/odin-sdl2.git
+[submodule "deps/odin-glfw"]
+	path = deps/odin-glfw
+	url = https://github.com/thePHTest/odin-glfw.git

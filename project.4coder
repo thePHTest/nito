@@ -21,9 +21,9 @@ blacklist_patterns = {
 };
 
 load_paths = {
-	{
-		{ {"."}, .recursive = true, .relative = true }, .os = "win"
-	},
+	{{
+		{".", .recursive = true, .relative = true }, {"..\\Odin\\", .recursive = true, .relative = true }
+	}, .os="win"}
 };
 
 command_list = {
