@@ -4,6 +4,7 @@ import vk "../vulkan_gen/vulkan/"
 import sdl "../deps/odin-sdl2/"
 
 import "core:runtime"
+import "core:log"
 import "core:fmt"
 import "core:slice"
 import "core:mem"
@@ -38,12 +39,17 @@ VkGetInstanceProc : VkGetInstanceProcAddr;
 
 VkInstance : vk.Instance = nil;
 
+GlobalLog : log.Logger;
+
 VkSetProcAddress :: proc(p: rawptr, name: cstring) {
     (cast(^rawptr)(p))^  = VkGetInstanceProc(VkInstance, name);
 }
 
 main :: proc() {
-    c := context;
+    // Build the logger
+    GlobalLog = log.create_console_logger();
+    context.logger = GlobalLog;
+    log.info("Logger initialized");
     
     // Do SDL2
     // Any reason to not init everything?
@@ -51,7 +57,7 @@ main :: proc() {
     vk_load_lib_res := sdl.vulkan_load_library(nil);
     fmt.println(sdl.get_error());
     if vk_load_lib_res != 0 {
-        fmt.println("Unable to load vulkan lib!");
+        log.fatal("Unable to load vulkan lib!");
         fmt.println(sdl.get_error());
         return;
     }
@@ -63,28 +69,15 @@ main :: proc() {
     
     vk_proc_addr := sdl.vulkan_get_gk_get_instance_proc_addr();
     if vk_proc_addr == nil {
-        fmt.println("Unable to get vk_proc_addr!");
+        log.fatal("Unable to get vk_proc_addr!");
         return;
     }
     VkGetInstanceProc = cast(VkGetInstanceProcAddr)vk_proc_addr;
     vk.load_proc_addresses(VkSetProcAddress);
     
-    if ODIN_DEBUG {
-        fmt.println("DEBUG BUILD");
-        vk_layer_count : u32;
-        vk.EnumerateInstanceLayerProperties(&vk_layer_count, nil);
-        vk_layer_props := make([dynamic]vk.LayerProperties, vk_layer_count);
-        vk.EnumerateInstanceLayerProperties(&vk_layer_count, &vk_layer_props[0]);
-        
-        for i in 0..<vk_layer_count {
-            layer_name := string(vk_layer_props[i].layerName[:]);
-            fmt.println("Found validation layer: ", layer_name);
-        }
-    }
-    
     fmt.println(sdl.get_error());
     if window == nil {
-        fmt.println("Unable to create sdl window!");
+        log.fatal("Unable to create sdl window!");
         fmt.println(sdl.get_error());
         return;
     }
@@ -92,15 +85,15 @@ main :: proc() {
     vk_extensions_count : u32 = 100;
     vk_extensions : [100]cstring;
     vk_get_instance_extensions_res := sdl.vulkan_get_instance_extensions(window, &vk_extensions_count, &vk_extensions[0]);
-    fmt.println("Found ", vk_extensions_count, " Vulkan extensions.");
+    log.info("Found ", vk_extensions_count, " Vulkan extensions.");
     if vk_get_instance_extensions_res == 0 {
-        fmt.println("Failed to get Vulkan instance extensions!");
+        log.fatal("Failed to get Vulkan instance extensions!");
         fmt.println(sdl.get_error());
         return;
     }
     
     for i in 0..<vk_extensions_count {
-        fmt.println("Extensions: ", vk_extensions[i]);
+        log.info("Vulkan Extension: ", vk_extensions[i]);
     }
     
     vk_app_info : vk.ApplicationInfo;
@@ -117,28 +110,45 @@ main :: proc() {
     vk_create_info.sType = vk.StructureType.INSTANCE_CREATE_INFO;
     vk_create_info.pApplicationInfo = &vk_app_info;
     vk_create_info.enabledLayerCount = 0;
+    if ODIN_DEBUG {
+        vk_layer_count : u32;
+        vk.EnumerateInstanceLayerProperties(&vk_layer_count, nil);
+        vk_layer_props := make([dynamic]vk.LayerProperties, vk_layer_count);
+        vk.EnumerateInstanceLayerProperties(&vk_layer_count, &vk_layer_props[0]);
+        log.info("Found ", vk_layer_count, " Vulkan validation layers.");
+        
+        enabled_layers_names := make([dynamic]cstring, vk_layer_count);
+        for i in 0..<vk_layer_count {
+            layer_name := string(vk_layer_props[i].layerName[:]);
+            enabled_layers_names[i] = strings.clone_to_cstring(layer_name);
+            log.info("Vulkan Validation Layer: ", layer_name);
+        }
+        
+        vk_create_info.enabledLayerCount = vk_layer_count;
+        vk_create_info.ppEnabledLayerNames = &enabled_layers_names[0];
+    }    
     
     vk_instance_create_res := vk.CreateInstance(&vk_create_info, nil, &VkInstance);
-    fmt.println("Created Vulkan Instance");
+    log.infof("Created Vulkan Instance");
     if vk_instance_create_res != vk.Result.SUCCESS {
-        fmt.println("Failed to create Vulkan Instance!");
+        log.fatal("Failed to create Vulkan Instance!");
         return;
     }
     defer vk.DestroyInstance(VkInstance, nil);
-    vk.load_proc_addresses(VkSetProcAddress);
     
+    vk.load_proc_addresses(VkSetProcAddress);
     
     vk_surface : vk.SurfaceKHR;
     create_surface_res := sdl.vulkan_create_surface(window, VkInstance, &vk_surface);
     if create_surface_res == sdl.Bool.False {
-        fmt.println("Failed to create Vulkan surface!");
+        log.fatal("Failed to create Vulkan surface!");
         return;
     }
-    fmt.println("Created Vulkan Surface!");
+    log.info("Created Vulkan Surface!");
     
     vk_drawable_width, vk_drawable_height : i32;
     sdl.vulkan_get_drawable_size(window, &vk_drawable_width, &vk_drawable_height);
-    fmt.println("Vulkan drawable size: ", vk_drawable_width, " ", vk_drawable_height);
+    log.info("Vulkan drawable size: ", vk_drawable_width, " ", vk_drawable_height);
     
     filename : cstring = "SmallSquareLogo.png";
     out_filename := "out.png";
@@ -170,5 +180,5 @@ main :: proc() {
     fmt.println(len(out_image));
     stbi.write_png(out_filename, int(x), int(y), int(comp), out_image[0:x*y*comp], int(x*comp));
     
-    fmt.println("PROGRAM END");
+    log.info("PROGRAM END");
 }
