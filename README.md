@@ -1,2 +1,2 @@
 # nito
-Odin playground. Probably starting with a basic pixel sorter animation.
+Odin playground. Starting with Vulkan setup.
